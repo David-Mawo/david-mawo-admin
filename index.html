@@ -220,7 +220,7 @@
     <div class="logo">David B. Mawo · CFP</div>
     <h1>Admin Portal</h1>
     <input type="password" id="pw-input" placeholder="Password" autocomplete="current-password"/>
-    <button onclick="tryLogin()">Sign in</button>
+    <button id="login-btn">Sign in</button>
     <div class="login-error" id="login-error"></div>
   </div>
 </div>
@@ -385,7 +385,8 @@ function tryLogin() {
     document.getElementById('pw-input').value = '';
   }
 }
-document.getElementById('pw-input').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+document.getElementById("login-btn").addEventListener("click", tryLogin);
+document.getElementById("pw-input").addEventListener("keydown", function(e) { if (e.key === "Enter") tryLogin(); });
 
 function logout() {
   sessionStorage.removeItem('admin_auth');
