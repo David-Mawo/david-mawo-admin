@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audit Admin — David B. Mawo</title>
+<style>
+  :root {
+    --navy:   #0B1F3A;
+    --gold:   #C9A84C;
+    --gold-lt:#F0D98B;
+    --slate:  #2C3E55;
+    --mist:   #F2F5F8;
+    --white:  #FFFFFF;
+    --text:   #1A2636;
+    --subtle: #6B7E94;
+    --border: #DDE3EA;
+    --green:  #1E7D5A;
+    --red:    #C0392B;
+    --radius: 8px;
+    --shadow: 0 2px 12px rgba(11,31,58,.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--mist); color: var(--text); min-height: 100vh; }
+
+  /* ── LOGIN ── */
+  #login-screen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; background: var(--navy);
+  }
+  .login-card {
+    background: var(--white); border-radius: 12px; padding: 48px 40px;
+    width: 360px; box-shadow: 0 8px 40px rgba(0,0,0,.25);
+    text-align: center;
+  }
+  .login-card .logo { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 8px; }
+  .login-card h1 { font-size: 22px; color: var(--navy); margin-bottom: 32px; font-weight: 700; }
+  .login-card input {
+    width: 100%; padding: 12px 16px; border: 1.5px solid var(--border);
+    border-radius: var(--radius); font-size: 15px; margin-bottom: 16px;
+    outline: none; transition: border-color .2s;
+  }
+  .login-card input:focus { border-color: var(--gold); }
+  .login-card button {
+    width: 100%; padding: 13px; background: var(--navy); color: var(--white);
+    border: none; border-radius: var(--radius); font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: background .2s;
+  }
+  .login-card button:hover { background: var(--slate); }
+  .login-error { color: var(--red); font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+  /* ── APP SHELL ── */
+  #app { display: none; }
+  header {
+    background: var(--navy); color: var(--white);
+    padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  }
+  header .brand { display: flex; align-items: center; gap: 12px; }
+  header .brand span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); font-weight: 600; }
+  header .brand strong { font-size: 16px; font-weight: 700; }
+  header nav { display: flex; align-items: center; gap: 16px; }
+  header nav button {
+    background: none; border: 1.5px solid rgba(255,255,255,.25); color: var(--white);
+    padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; transition: all .2s;
+  }
+  header nav button:hover { border-color: var(--gold); color: var(--gold); }
+  header nav button.logout { border-color: transparent; opacity: .6; }
+  header nav button.logout:hover { opacity: 1; border-color: rgba(255,255,255,.25); color: var(--white); }
+
+  main { padding: 32px; max-width: 1200px; margin: 0 auto; }
+
+  /* ── STATS BAR ── */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--white); border-radius: var(--radius); padding: 20px 24px;
+    box-shadow: var(--shadow); border-left: 4px solid var(--gold);
+  }
+  .stat-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--subtle); font-weight: 600; margin-bottom: 6px; }
+  .stat-card .value { font-size: 28px; font-weight: 700; color: var(--navy); }
+  .stat-card .sub { font-size: 12px; color: var(--subtle); margin-top: 2px; }
+
+  /* ── CONTROLS ── */
+  .controls {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .controls input[type=text] {
+    flex: 1; min-width: 200px; padding: 9px 14px; border: 1.5px solid var(--border);
+    border-radius: var(--radius); font-size: 14px; outline: none; background: var(--white);
+  }
+  .controls input[type=text]:focus { border-color: var(--gold); }
+  .controls select {
+    padding: 9px 14px; border: 1.5px solid var(--border); border-radius: var(--radius);
+    font-size: 14px; background: var(--white); cursor: pointer; outline: none;
+  }
+  .btn-refresh {
+    padding: 9px 18px; background: var(--navy); color: var(--white);
+    border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600;
+    cursor: pointer; white-space: nowrap; transition: background .2s;
+  }
+  .btn-refresh:hover { background: var(--slate); }
+
+  /* ── TABLE ── */
+  .table-wrap { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead { background: var(--navy); color: var(--white); }
+  thead th {
+    padding: 12px 16px; text-align: left; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .08em; font-weight: 600; white-space: nowrap; cursor: pointer; user-select: none;
+  }
+  thead th:hover { background: var(--slate); }
+  thead th.sorted { color: var(--gold-lt); }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; cursor: pointer; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #F7F9FC; }
+  td { padding: 12px 16px; vertical-align: middle; }
+  td.name { font-weight: 600; color: var(--navy); }
+  td.email { color: var(--subtle); font-size: 13px; }
+  td.score { font-weight: 700; font-size: 15px; }
+  td.date { color: var(--subtle); font-size: 13px; white-space: nowrap; }
+
+  .score-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 48px; height: 28px; border-radius: 20px; font-size: 13px; font-weight: 700;
+  }
+  .score-high { background: #D4EDDA; color: #155724; }
+  .score-mid  { background: #FFF3CD; color: #856404; }
+  .score-low  { background: #F8D7DA; color: #721C24; }
+
+  .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; background: #E8EEF5; color: var(--slate);
+    margin: 2px 2px 2px 0; white-space: nowrap;
+  }
+
+  .btn-book {
+    padding: 5px 12px; background: var(--gold); color: var(--navy);
+    border: none; border-radius: 6px; font-size: 12px; font-weight: 700;
+    cursor: pointer; white-space: nowrap; transition: background .2s; text-decoration: none;
+    display: inline-block;
+  }
+  .btn-book:hover { background: var(--gold-lt); }
+
+  /* ── EMPTY / LOADING ── */
+  .empty { text-align: center; padding: 60px 20px; color: var(--subtle); }
+  .empty svg { margin-bottom: 16px; opacity: .3; }
+  .loading { text-align: center; padding: 60px 20px; color: var(--subtle); font-size: 15px; }
+  .loader-spin {
+    display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border);
+    border-top-color: var(--gold); border-radius: 50%; animation: spin .7s linear infinite;
+    vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── DETAIL DRAWER ── */
+  .overlay {
+    display: none; position: fixed; inset: 0; background: rgba(11,31,58,.45);
+    z-index: 200; align-items: flex-start; justify-content: flex-end;
+  }
+  .overlay.open { display: flex; }
+  .drawer {
+    background: var(--white); width: 420px; max-width: 95vw; height: 100vh;
+    overflow-y: auto; box-shadow: -4px 0 24px rgba(0,0,0,.18); padding: 0;
+    animation: slideIn .22s ease;
+  }
+  @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .drawer-header {
+    background: var(--navy); color: var(--white); padding: 24px;
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .drawer-header h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .drawer-header p { font-size: 13px; opacity: .7; }
+  .drawer-close {
+    background: none; border: none; color: var(--white); font-size: 22px;
+    cursor: pointer; opacity: .7; line-height: 1; padding: 0;
+  }
+  .drawer-close:hover { opacity: 1; }
+  .drawer-body { padding: 24px; }
+  .d-section { margin-bottom: 24px; }
+  .d-label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--subtle); font-weight: 600; margin-bottom: 8px; }
+  .d-value { font-size: 15px; color: var(--text); }
+  .d-row { display: flex; gap: 16px; margin-bottom: 16px; }
+  .d-row .d-section { flex: 1; margin-bottom: 0; }
+
+  .score-bar-wrap { margin-bottom: 12px; }
+  .score-bar-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+  .score-bar-label span:first-child { color: var(--text); }
+  .score-bar-label span:last-child { color: var(--subtle); font-weight: 600; }
+  .score-bar-bg { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--gold), #E8B84B); transition: width .4s; }
+
+  .d-book-btn {
+    display: block; width: 100%; padding: 14px; background: var(--navy); color: var(--white);
+    text-align: center; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700;
+    cursor: pointer; text-decoration: none; margin-top: 8px; transition: background .2s;
+  }
+  .d-book-btn:hover { background: var(--slate); }
+
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-top: 1px solid var(--border); font-size: 13px; color: var(--subtle); }
+  .pagination button {
+    padding: 6px 14px; border: 1.5px solid var(--border); background: var(--white);
+    border-radius: 6px; font-size: 13px; cursor: pointer; transition: all .2s;
+  }
+  .pagination button:hover:not(:disabled) { border-color: var(--navy); color: var(--navy); }
+  .pagination button:disabled { opacity: .4; cursor: default; }
+
+  @media (max-width: 700px) {
+    main { padding: 16px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    table thead th:nth-child(4), table td:nth-child(4),
+    table thead th:nth-child(5), table td:nth-child(5) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="logo">David B. Mawo · CFP</div>
+    <h1>Admin Portal</h1>
+    <input type="password" id="pw-input" placeholder="Password" autocomplete="current-password"/>
+    <button onclick="tryLogin()">Sign in</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="brand">
+      <div>
+        <span>David B. Mawo · CFP</span><br>
+        <strong>Audit Admin</strong>
+      </div>
+    </div>
+    <nav>
+      <button onclick="loadLeads()">↻ Refresh</button>
+      <button class="logout" onclick="logout()">Sign out</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="label">Total Leads</div>
+        <div class="value" id="stat-total">—</div>
+        <div class="sub">all time</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">This Week</div>
+        <div class="value" id="stat-week">—</div>
+        <div class="sub">last 7 days</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Avg Score</div>
+        <div class="value" id="stat-avg">—</div>
+        <div class="sub">literacy %</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Top Gap</div>
+        <div class="value" id="stat-gap">—</div>
+        <div class="sub">most common weakness</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <input type="text" id="search-input" placeholder="Search name or email…" oninput="renderTable()"/>
+      <select id="sort-select" onchange="renderTable()">
+        <option value="date-desc">Newest first</option>
+        <option value="date-asc">Oldest first</option>
+        <option value="score-desc">Highest score</option>
+        <option value="score-asc">Lowest score</option>
+      </select>
+      <button class="btn-refresh" onclick="loadLeads()">↻ Refresh</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Score</th>
+            <th>Profile Tags</th>
+            <th>Date</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="leads-tbody"></tbody>
+      </table>
+      <div id="table-loading" class="loading"><span class="loader-spin"></span>Loading leads…</div>
+      <div id="table-empty" class="empty" style="display:none">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div>No leads found</div>
+      </div>
+      <div class="pagination">
+        <span id="page-info"></span>
+        <div style="display:flex;gap:8px">
+          <button id="btn-prev" onclick="changePage(-1)" disabled>← Prev</button>
+          <button id="btn-next" onclick="changePage(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- DETAIL DRAWER -->
+<div class="overlay" id="overlay" onclick="closeDrawer(event)">
+  <div class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div>
+        <h2 id="d-name">—</h2>
+        <p id="d-submitted">—</p>
+      </div>
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div class="d-row">
+        <div class="d-section">
+          <div class="d-label">Email</div>
+          <div class="d-value" id="d-email">—</div>
+        </div>
+        <div class="d-section">
+          <div class="d-label">Phone</div>
+          <div class="d-value" id="d-phone">—</div>
+        </div>
+      </div>
+      <div class="d-row">
+        <div class="d-section">
+          <div class="d-label">Literacy Score</div>
+          <div class="d-value" id="d-score" style="font-size:28px;font-weight:700;color:var(--navy)">—</div>
+        </div>
+        <div class="d-section">
+          <div class="d-label">Profile Tags</div>
+          <div class="d-value" id="d-tags">—</div>
+        </div>
+      </div>
+      <div class="d-section">
+        <div class="d-label">Score by Category</div>
+        <div id="d-scores"></div>
+      </div>
+      <div class="d-section">
+        <div class="d-label">Profile Answers</div>
+        <div id="d-profile"></div>
+      </div>
+      <a id="d-book" href="#" target="_blank" class="d-book-btn">📅 Book a Call</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://bohnnxsvejiqhxfhnzsi.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvaG5ueHN2ZWppcWh4ZmhuenNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MTIwMDEsImV4cCI6MjA5NzM4ODAwMX0.Sfgdyz6yHFMX-YAvdoauT1vnKZC2_jGnTjfAgu4a1kU';
+const BOOKING_LINK  = 'https://calendar.app.google/kBd2mhsKuEs7XB5h7';
+const ADMIN_PASS    = '14@ClemenceLois';
+const PAGE_SIZE     = 20;
+
+const CAT_LABELS = {
+  budgeting:    'Budgeting',
+  tax:          'Tax Strategy',
+  protection:   'Protection',
+  retirement:   'Retirement',
+  estate:       'Estate Planning',
+  investing:    'Investing',
+  government:   'Gov't Benefits',
+  debt:         'Debt Management'
+};
+
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+function tryLogin() {
+  const val = document.getElementById('pw-input').value;
+  if (val === ADMIN_PASS) {
+    sessionStorage.setItem('admin_auth', '1');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadLeads();
+  } else {
+    document.getElementById('login-error').textContent = 'Incorrect password.';
+    document.getElementById('pw-input').value = '';
+  }
+}
+document.getElementById('pw-input').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+
+function logout() {
+  sessionStorage.removeItem('admin_auth');
+  location.reload();
+}
+
+if (sessionStorage.getItem('admin_auth') === '1') {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+let allLeads = [];
+let currentPage = 1;
+
+async function loadLeads() {
+  document.getElementById('table-loading').style.display = 'block';
+  document.getElementById('table-empty').style.display   = 'none';
+  document.getElementById('leads-tbody').innerHTML = '';
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/leads?select=*&order=submitted_at.desc&limit=500`,
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+    );
+    if (!res.ok) throw new Error('Supabase error ' + res.status);
+    allLeads = await res.json();
+    updateStats();
+    currentPage = 1;
+    renderTable();
+  } catch(e) {
+    document.getElementById('leads-tbody').innerHTML =
+      `<tr><td colspan="7" style="padding:24px;color:var(--red)">Error loading leads: ${e.message}</td></tr>`;
+  } finally {
+    document.getElementById('table-loading').style.display = 'none';
+  }
+}
+
+function updateStats() {
+  const named = allLeads.filter(l => l.name || l.email);
+  document.getElementById('stat-total').textContent = named.length;
+
+  const week = named.filter(l => {
+    if (!l.submitted_at) return false;
+    return (Date.now() - new Date(l.submitted_at)) < 7 * 86400000;
+  });
+  document.getElementById('stat-week').textContent = week.length;
+
+  const scored = named.filter(l => l.literacy_score != null);
+  if (scored.length) {
+    const avg = scored.reduce((s, l) => s + l.literacy_score, 0) / scored.length;
+    document.getElementById('stat-avg').textContent = Math.round(avg) + '%';
+  }
+
+  // Top gap = category with lowest avg pct across all leads
+  const catTotals = {};
+  named.forEach(l => {
+    if (!l.scores) return;
+    Object.entries(l.scores).forEach(([cat, v]) => {
+      if (!catTotals[cat]) catTotals[cat] = { earned: 0, possible: 0 };
+      catTotals[cat].earned   += v.earned   || 0;
+      catTotals[cat].possible += v.possible || 0;
+    });
+  });
+  let worstCat = null, worstPct = Infinity;
+  Object.entries(catTotals).forEach(([cat, v]) => {
+    if (v.possible > 0) {
+      const pct = v.earned / v.possible;
+      if (pct < worstPct) { worstPct = pct; worstCat = cat; }
+    }
+  });
+  document.getElementById('stat-gap').textContent = worstCat ? (CAT_LABELS[worstCat] || worstCat) : '—';
+}
+
+// ── TABLE ─────────────────────────────────────────────────────────────────────
+function filtered() {
+  const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+  return allLeads.filter(l => {
+    if (!(l.name || l.email)) return false; // skip anonymous
+    if (!q) return true;
+    return (l.name||'').toLowerCase().includes(q) || (l.email||'').toLowerCase().includes(q);
+  });
+}
+
+function sorted(rows) {
+  const v = document.getElementById('sort-select')?.value || 'date-desc';
+  return [...rows].sort((a, b) => {
+    if (v === 'date-desc') return new Date(b.submitted_at) - new Date(a.submitted_at);
+    if (v === 'date-asc')  return new Date(a.submitted_at) - new Date(b.submitted_at);
+    if (v === 'score-desc') return (b.literacy_score||0) - (a.literacy_score||0);
+    if (v === 'score-asc')  return (a.literacy_score||0) - (b.literacy_score||0);
+    return 0;
+  });
+}
+
+function renderTable() {
+  const rows = sorted(filtered());
+  const total = rows.length;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page  = rows.slice(start, start + PAGE_SIZE);
+
+  const tbody = document.getElementById('leads-tbody');
+  tbody.innerHTML = '';
+  document.getElementById('table-empty').style.display = total === 0 ? 'block' : 'none';
+
+  page.forEach(lead => {
+    const tr = document.createElement('tr');
+    tr.onclick = () => openDrawer(lead);
+
+    const score = lead.literacy_score;
+    const scoreClass = score >= 70 ? 'score-high' : score >= 40 ? 'score-mid' : 'score-low';
+    const scoreTxt = score != null ? score + '%' : '—';
+
+    const tags = (lead.profile_tags || []).slice(0, 3).map(t =>
+      `<span class="tag">${t}</span>`).join('');
+
+    const date = lead.submitted_at
+      ? new Date(lead.submitted_at).toLocaleDateString('en-CA', { month:'short', day:'numeric', year:'numeric' })
+      : '—';
+
+    tr.innerHTML = `
+      <td class="name">${esc(lead.name || '—')}</td>
+      <td class="email">${esc(lead.email || '—')}</td>
+      <td>${esc(lead.phone || '—')}</td>
+      <td><span class="score-pill ${scoreClass}">${scoreTxt}</span></td>
+      <td>${tags || '<span style="color:var(--subtle);font-size:12px">none</span>'}</td>
+      <td class="date">${date}</td>
+      <td><a class="btn-book" href="${BOOKING_LINK}" target="_blank" onclick="event.stopPropagation()">Book</a></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('page-info').textContent =
+    total === 0 ? 'No results' : `${start+1}–${Math.min(start+PAGE_SIZE, total)} of ${total}`;
+  document.getElementById('btn-prev').disabled = currentPage === 1;
+  document.getElementById('btn-next').disabled = start + PAGE_SIZE >= total;
+}
+
+function changePage(dir) {
+  currentPage += dir;
+  renderTable();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── DRAWER ────────────────────────────────────────────────────────────────────
+function openDrawer(lead) {
+  document.getElementById('d-name').textContent = lead.name || '(no name)';
+  document.getElementById('d-email').textContent = lead.email || '—';
+  document.getElementById('d-phone').textContent = lead.phone || '—';
+  document.getElementById('d-submitted').textContent = lead.submitted_at
+    ? 'Submitted ' + new Date(lead.submitted_at).toLocaleString('en-CA', { dateStyle:'medium', timeStyle:'short' })
+    : '';
+
+  const score = lead.literacy_score;
+  const scoreEl = document.getElementById('d-score');
+  scoreEl.textContent = score != null ? score + '%' : '—';
+  scoreEl.style.color = score >= 70 ? 'var(--green)' : score >= 40 ? '#856404' : 'var(--red)';
+
+  const tags = (lead.profile_tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join(' ');
+  document.getElementById('d-tags').innerHTML = tags || '—';
+
+  // Category scores
+  const scoresEl = document.getElementById('d-scores');
+  scoresEl.innerHTML = '';
+  if (lead.scores) {
+    Object.entries(lead.scores).forEach(([cat, v]) => {
+      const pct = v.possible > 0 ? Math.round(v.earned / v.possible * 100) : 0;
+      scoresEl.innerHTML += `
+        <div class="score-bar-wrap">
+          <div class="score-bar-label">
+            <span>${CAT_LABELS[cat] || cat}</span>
+            <span>${v.earned}/${v.possible} (${pct}%)</span>
+          </div>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:${pct}%"></div></div>
+        </div>`;
+    });
+  } else {
+    scoresEl.textContent = '—';
+  }
+
+  // Profile answers
+  const profileEl = document.getElementById('d-profile');
+  profileEl.innerHTML = '';
+  if (lead.profile) {
+    Object.entries(lead.profile).forEach(([k, v]) => {
+      profileEl.innerHTML += `
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
+          <span style="color:var(--subtle)">${esc(k)}</span>
+          <span style="font-weight:600">${esc(String(v))}</span>
+        </div>`;
+    });
+  } else {
+    profileEl.textContent = '—';
+  }
+
+  document.getElementById('d-book').href = BOOKING_LINK;
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDrawer(e) {
+  if (e && e.target !== document.getElementById('overlay')) return;
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Auto-load if already authed
+if (sessionStorage.getItem('admin_auth') === '1') loadLeads();
+</script>
+</body>
+</html>
